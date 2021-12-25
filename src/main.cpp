@@ -6,11 +6,13 @@
 #define OLED_RESET    -1 // This display does not have a reset pin accessible
 Adafruit_SSD1306 display(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, OLED_RESET);
 
+#define FAN_CTRL PB1
+
 #define FAN_PWM PA_0
 
-#define FAN1_RPM PB_3
-#define FAN2_RPM PB_4
-#define FAN3_RPM PB_5
+#define FAN1_RPM PB3
+#define FAN2_RPM PB4
+#define FAN3_RPM PB5
 
 // A little faster than 1 second so the display updates more often.
 // Don't set it too fast or the PWM will be reset too often.
@@ -31,7 +33,7 @@ uint32_t fan2_RPM = 0;
 uint32_t fan3_RPM = 0;
 
 uint32_t fan_speed_setpoint = 0;
-uint8_t fan_PWM_setpoint = 0;
+uint32_t fan_PWM_setpoint = 0;
 
 // ====== HELPER FUNCTIONS ======
 
@@ -45,7 +47,8 @@ void update_display(){
   display.println("Fan 2: ");
   display.println("Fan 3: ");
   display.println();
-  display.println("Fan Setpoint (%): ");
+  //display.println("Fan Setpoint (%): " + String(fan_speed_setpoint));
+  display.println("Fan Setpoint (%): " + String(fan_PWM_setpoint));
   display.display();
 }
 
@@ -73,10 +76,10 @@ void setup() {
   attachInterrupt(digitalPinToInterrupt(FAN3_RPM), fan1_IRQ, RISING);
 
   //Initialize PWM for fan control
-  pinMode(PA0, OUTPUT);
+  pinMode(FAN_PWM, OUTPUT);
 
   //Initialize ADC for fan RPM setpoint
-  pinMode(PB1, INPUT);
+  pinMode(FAN_CTRL, INPUT);
 
   //Initialize OLED
   display.begin(SSD1306_SWITCHCAPVCC, 0x3C);
@@ -86,8 +89,16 @@ void setup() {
 
 void loop() {
   //Update RPM setpoint value
-  fan_speed_setpoint = analogRead(PB1);
-  fan_PWM_setpoint = 1024 * 100 / fan_speed_setpoint;
+  fan_speed_setpoint = analogRead(FAN_CTRL);
+  fan_PWM_setpoint = (float)fan_speed_setpoint * 100.0 / 1023.0;
+
+  if (fan_PWM_setpoint > 98) {
+    fan_PWM_setpoint = 100;
+  }
+  
+  if (fan_PWM_setpoint < 0) {
+    fan_PWM_setpoint = 0;
+  }
 
   //Update PWM output
   pwm_start(FAN_PWM, 25000, fan_PWM_setpoint, TimerCompareFormat_t::PERCENT_COMPARE_FORMAT);

@@ -43,9 +43,9 @@ void update_display(){
   display.setTextColor(SSD1306_WHITE);
   display.setCursor(0,0);
   display.println("*** Fan Speed RPM ***");
-  display.println("Fan 1: ");
-  display.println("Fan 2: ");
-  display.println("Fan 3: ");
+  display.println("Fan 1: " + String(fan1_RPM));
+  display.println("Fan 2: " + String(fan2_RPM));
+  display.println("Fan 3: " + String(fan3_RPM));
   display.println();
   //display.println("Fan Setpoint (%): " + String(fan_speed_setpoint));
   display.println("Fan Setpoint (%): " + String(fan_PWM_setpoint));
@@ -107,6 +107,11 @@ void loop() {
   fan1_RPM = fan1_tick * RPM_SCALAR;
   fan2_RPM = fan2_tick * RPM_SCALAR;
   fan3_RPM = fan3_tick * RPM_SCALAR;
+
+  //Reset fan ticks for this time period.
+  fan1_tick = 0;
+  fan2_tick = 0;
+  fan3_tick = 0;
 
   //Update display
   update_display();

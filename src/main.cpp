@@ -10,9 +10,10 @@ Adafruit_SSD1306 display(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, OLED_RESET);
 
 #define FAN_PWM PA_0
 
-#define FAN1_RPM PB3
-#define FAN2_RPM PB4
-#define FAN3_RPM PB5
+#define FAN1_RPM PA12
+#define FAN2_RPM PA15
+#define FAN3_RPM PB3
+#define FAN4_RPM PB4
 
 // A little faster than 1 second so the display updates more often.
 // Don't set it too fast or the PWM will be reset too often.
@@ -27,10 +28,13 @@ uint32_t prevLoopTime_ms = 0;
 uint32_t fan1_tick = 0;
 uint32_t fan2_tick = 0;
 uint32_t fan3_tick = 0;
+uint32_t fan4_tick = 0;
+
 
 uint32_t fan1_RPM = 0;
 uint32_t fan2_RPM = 0;
 uint32_t fan3_RPM = 0;
+uint32_t fan4_RPM = 0;
 
 uint32_t fan_speed_setpoint = 0;
 uint32_t fan_PWM_setpoint = 0;
@@ -46,9 +50,10 @@ void update_display(){
   display.println("Fan 1: " + String(fan1_RPM));
   display.println("Fan 2: " + String(fan2_RPM));
   display.println("Fan 3: " + String(fan3_RPM));
+  display.println("Fan 4: " + String(fan4_RPM));
   display.println();
   //display.println("Fan Setpoint (%): " + String(fan_speed_setpoint));
-  display.println("Fan Setpoint (%): " + String(fan_PWM_setpoint));
+  display.println("Fan Setpoint (%): " + String(100-fan_PWM_setpoint));
   display.display();
 }
 
@@ -64,6 +69,10 @@ void fan3_IRQ(){
   fan3_tick += 1;
 }
 
+void fan4_IRQ(){
+  fan4_tick += 1;
+}
+
 // === MAIN CODE ====
 
 void setup() {
@@ -71,9 +80,11 @@ void setup() {
   pinMode(FAN1_RPM, INPUT_PULLUP);
   pinMode(FAN2_RPM, INPUT_PULLUP);
   pinMode(FAN3_RPM, INPUT_PULLUP);
+  pinMode(FAN4_RPM, INPUT_PULLUP);
   attachInterrupt(digitalPinToInterrupt(FAN1_RPM), fan1_IRQ, RISING);
-  attachInterrupt(digitalPinToInterrupt(FAN2_RPM), fan1_IRQ, RISING);
-  attachInterrupt(digitalPinToInterrupt(FAN3_RPM), fan1_IRQ, RISING);
+  attachInterrupt(digitalPinToInterrupt(FAN2_RPM), fan2_IRQ, RISING);
+  attachInterrupt(digitalPinToInterrupt(FAN3_RPM), fan3_IRQ, RISING);
+  attachInterrupt(digitalPinToInterrupt(FAN4_RPM), fan4_IRQ, RISING);
 
   //Initialize PWM for fan control
   pinMode(FAN_PWM, OUTPUT);
@@ -96,22 +107,25 @@ void loop() {
     fan_PWM_setpoint = 100;
   }
   
-  if (fan_PWM_setpoint < 0) {
+  if (fan_PWM_setpoint < 10) {
     fan_PWM_setpoint = 0;
   }
 
   //Update PWM output
-  pwm_start(FAN_PWM, 25000, fan_PWM_setpoint, TimerCompareFormat_t::PERCENT_COMPARE_FORMAT);
+  pwm_start(FAN_PWM, 25000, fan_PWM_setpoint, 
+            TimerCompareFormat_t::PERCENT_COMPARE_FORMAT);
 
   //Calculate fan RPM 1-3
   fan1_RPM = fan1_tick * RPM_SCALAR;
   fan2_RPM = fan2_tick * RPM_SCALAR;
   fan3_RPM = fan3_tick * RPM_SCALAR;
+  fan4_RPM = fan4_tick * RPM_SCALAR;
 
   //Reset fan ticks for this time period.
   fan1_tick = 0;
   fan2_tick = 0;
   fan3_tick = 0;
+  fan4_tick = 0;
 
   //Update display
   update_display();
